@@ -2,7 +2,7 @@ lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
-  spec.name    = "fluent-plugin-label-selector"
+  spec.name    = "fluent-plugin-label-router"
   spec.version = "0.1.0"
   spec.authors = ["tarokkk"]
   spec.email   = ["gubasanyi@gmail.com"]

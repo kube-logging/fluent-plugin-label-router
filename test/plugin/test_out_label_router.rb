@@ -1,5 +1,5 @@
 require "helper"
-require "fluent/plugin/out_label_selector.rb"
+require "fluent/plugin/out_label_router.rb"
 
 class LabelSelectorOutputTest < Test::Unit::TestCase
   setup do
