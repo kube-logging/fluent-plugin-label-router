@@ -28,14 +28,14 @@ module Fluent
       #record_accessor_create("$['key1'][0]['key2']")
 
       config_section :route, param_name: :routes, multi: true do
+        desc "Label definition to match record. Example: app:nginx "
+        config_param :labels, :hash
+        desc "Namespaces definition to filter the record. Ignored if left empty."
+        config_param :namespace, :string, :default => ""
+        desc "New @LABEL if selectors matched"
+        config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
-        desc "New label if selectors matched"
-        config_param :@label, :string, :default => nil
-        desc "JSON style list of labels"
-        config_param :labels, :hash
-        desc "If not empty namespaces will be filtered as well"
-        config_param :namespace, :string, :default => ""
       end
 
       class Route
