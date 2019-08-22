@@ -29,7 +29,7 @@ module Fluent
 
       config_section :route, param_name: :routes, multi: true do
         desc "Label definition to match record. Example: app:nginx "
-        config_param :labels, :hash
+        config_param :labels, :hash, :default => {}
         desc "Namespaces definition to filter the record. Ignored if left empty."
         config_param :namespace, :string, :default => ""
         desc "New @LABEL if selectors matched"
