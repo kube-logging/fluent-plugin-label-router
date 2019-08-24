@@ -28,7 +28,7 @@ module Fluent
       #record_accessor_create("$['key1'][0]['key2']")
 
       config_section :route, param_name: :routes, multi: true do
-        desc "Label definition to match record. Example: app:nginx "
+        desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
         config_param :labels, :hash, :default => {}
         desc "Namespaces definition to filter the record. Ignored if left empty."
         config_param :namespace, :string, :default => ""
