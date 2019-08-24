@@ -55,7 +55,7 @@ The configuration builds from `<route>` sections.
 
 ## Examples
 
-###1. Route specific `labels` and `namespace` to `@label` and new `tag`
+### 1. Route specific `labels` and `namespace` to `@label` and new `tag`
 Configuration to re-tag and re-label all logs from `default` namespace with label `app=nginx` and `env=dev`.
 ```
 <match example.tag**>
@@ -83,7 +83,7 @@ Output
 @label = "@NGINX"; tag = "new_tag"; {"log" => "", "kubernetes" => { "namespace_name" => "default", "labels" =>  {"app" => "nginx" } } }
 nil
 ```
-###2. Both `labels` and `namespace` are optional
+### 2. Both `labels` and `namespace` are optional
 Only `labels`
 ```
 <match example.tag**>
@@ -117,7 +117,7 @@ Rewrite all
 </match>
 ```
 
-### One of `@label` ot `tag` configuration should be specified
+### 3. One of `@label` ot `tag` configuration should be specified
 If you don't rewrite either of them fluent will **likely to crash** because it will reprocess the same messages again.
 
 ## Copyright
