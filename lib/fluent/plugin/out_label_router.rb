@@ -36,6 +36,8 @@ module Fluent
         config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
+        desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
+        config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
       end
 
       class Route
@@ -72,12 +74,22 @@ module Fluent
       end
 
       def process(tag, es)
+        event_stream = Hash.new {|h, k| h[k] = Fluent::MultiEventStream.new }
         es.each do |time, record|
           input_labels = @access_to_labels.call(record).to_h
           input_namespace = @access_to_namespace.call(record).to_s
           @routers.each do |r|
             if r.match?(input_labels, input_namespace)
-              r.emit(tag, time, record)
+              if @batch
+                event_stream[r].add(time, record)
+              else
+                r.emit(tag, time, record)
+              end
+            end
+          end
+          if @batch
+            event_stream.each do |r, es|
+              r.emit_es(tag, es)
             end
           end
         end
@@ -93,6 +105,8 @@ module Fluent
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
         @access_to_namespace = record_accessor_create("$.kubernetes.namespace_name")
+
+        @batch = @emit_mode == :batch
       end
     end
   end

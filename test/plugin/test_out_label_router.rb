@@ -46,6 +46,7 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       d = create_driver(CONFIG)
       d.run(default_tag: 'test') do
         d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
       end
       events = d.events
 
