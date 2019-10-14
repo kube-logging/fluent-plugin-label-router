@@ -36,6 +36,10 @@ module Fluent
         config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
+        desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
+        config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
+        desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
+        config_param :sticky_tags, :bool, default: true
       end
 
       class Route
@@ -72,12 +76,34 @@ module Fluent
       end
 
       def process(tag, es)
+        if @sticky_tags
+          if @route_map.has_key?(tag)
+            # We already matched with this tag send events to the routers
+            @route_map[tag].each do |r|
+              r.emit_es(tag, es)
+            end
+            return
+          end
+        end
+        event_stream = Hash.new {|h, k| h[k] = Fluent::MultiEventStream.new }
         es.each do |time, record|
           input_labels = @access_to_labels.call(record).to_h
           input_namespace = @access_to_namespace.call(record).to_s
           @routers.each do |r|
             if r.match?(input_labels, input_namespace)
-              r.emit(tag, time, record)
+              if @sticky_tags
+                @route_map[tag].push(r)
+              end
+              if @batch
+                event_stream[r].add(time, record)
+              else
+                r.emit(tag, time, record)
+              end
+            end
+          end
+          if @batch
+            event_stream.each do |r, es|
+              r.emit_es(tag, es)
             end
           end
         end
@@ -85,6 +111,7 @@ module Fluent
 
       def configure(conf)
         super
+        @route_map = Hash.new { |h, k| h[k] = Array.new }
         @routers = []
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
@@ -93,6 +120,8 @@ module Fluent
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
         @access_to_namespace = record_accessor_create("$.kubernetes.namespace_name")
+
+        @batch = @emit_mode == :batch
       end
     end
   end

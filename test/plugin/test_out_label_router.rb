@@ -47,6 +47,9 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       d.run(default_tag: 'test') do
         d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
       end
+      d.run(default_tag: 'test2') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
+      end
       events = d.events
 
       assert_equal(1, events.size)
