@@ -52,6 +52,8 @@ The configuration builds from `<route>` sections.
 | namespace | Namespaces definition to filter the record. Ignored if left empty. | "" |
 | @label | New @LABEL if selectors matched | nil |
 | tag | New tag if selectors matched | "" |
+| emit_mode | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch | batch |
+| sticky_tags | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true |
 
 ## Examples
 
