@@ -80,7 +80,7 @@ module Fluent
           if @route_map.has_key?(tag)
             # We already matched with this tag send events to the routers
             @route_map[tag].each do |r|
-              r.emit_es(tag, es)
+              r.emit_es(tag, es.dup)
             end
             return
           end
@@ -97,13 +97,13 @@ module Fluent
               if @batch
                 event_stream[r].add(time, record)
               else
-                r.emit(tag, time, record)
+                r.emit(tag, time, record.dup)
               end
             end
           end
           if @batch
             event_stream.each do |r, es|
-              r.emit_es(tag, es)
+              r.emit_es(tag, es.dup)
             end
           end
         end
