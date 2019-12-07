@@ -67,6 +67,19 @@ can have several `<select>` and/or `<exclude>` statement.
 | labels     | Label definition to match record. Example: app:nginx                          | nil     |
 | namespaces | Namespaces definition to filter the record. Ignored if left empty.            | []      |
 
+## Rules of thumb
+
+1. Defining more than one namespace in `namespaces` inside a `select` statement
+is impossible to match because a Pod only lives in one namespace. This is only effective in
+`exclude` statements.
+
+2. Using `sticky_tags` means that only the **first** record will be analysed per `tag`.
+Keep that in mind if you are ingesting traffic that is not unique on a per tag bases.
+Fluentd and fluent-bit tail logs from Kubernetes are unique per container.
+
+3. The plugin does not check if the configuration is valid so be careful to not define
+impossible statements.
+
 ## Examples
 
 ### 1. Route specific `labels` and `namespaces` to `@label` and new `tag`
@@ -79,7 +92,7 @@ Configuration to re-tag and re-label all logs from `default` namespace with labe
     tag new_tag
     <selector>
       labels app:nginx,env:dev
-      namespace default
+      namespaces default
     </selector>
   </route>
 </match>
@@ -95,7 +108,7 @@ Configuration to re-tag and re-label all logs that **not** from `default` namesp
     tag new_tag
     <exclude>
       labels app:nginx,env:dev
-      namespace default
+      namespaces default
     </exclude>
   </route>
 </match>
@@ -137,7 +150,7 @@ Only `namespace`
     @label @NGINX
     tag new_tag
     <selector>
-      namespace default
+      namespaces default
     </selector>
   </route>
 </match>
