@@ -32,7 +32,8 @@ $ bundle
 
 ## Configuration
 
-The configuration builds from `<route>` sections.
+The configuration builds from `<route>` sections. Each `route` section
+can have several `<select>` and/or `<exclude>` statement.
 
 ```
 <match example.tag**>
@@ -41,32 +42,61 @@ The configuration builds from `<route>` sections.
      ...
   </route>
   <route>
-     ...
+    <select>
+      ...
+    </select>
+    <exclude>
+      ...
+    </exclude>
   </route>
 </match>
 ```
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| labels | Label definition to match record. Example: app:nginx  | nil |
-| namespace | Namespaces definition to filter the record. Ignored if left empty. | "" |
-| @label | New @LABEL if selectors matched | nil |
-| tag | New tag if selectors matched | "" |
-| emit_mode | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch | batch |
-| sticky_tags | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true |
+| Parameter   | Description                                                                                            | Default |
+|-------------|--------------------------------------------------------------------------------------------------------|---------|
+| @label      | New @LABEL if selectors matched                                                                        | nil     |
+| tag         | New tag if selectors matched                                                                           | ""      |
+| emit_mode   | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | batch   |
+| sticky_tags | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true    |
+| selector    | Select the log if match with parameters defined                                                        | nil     |
+| exclude     | Exclude the log if match with parameters defined                                                       | nil     |
+
+#### Selectors / Excludes
+| Parameter  | Description                                                                   | Default |
+|------------|-------------------------------------------------------------------------------|---------|
+| labels     | Label definition to match record. Example: app:nginx                          | nil     |
+| namespaces | Namespaces definition to filter the record. Ignored if left empty.            | []      |
 
 ## Examples
 
-### 1. Route specific `labels` and `namespace` to `@label` and new `tag`
+### 1. Route specific `labels` and `namespaces` to `@label` and new `tag`
 Configuration to re-tag and re-label all logs from `default` namespace with label `app=nginx` and `env=dev`.
 ```
 <match example.tag**>
   @type label_router
   <route>
-     labels app:nginx,env:dev
-     namespace default
-     @label @NGINX
-     tag new_tag
+    @label @NGINX
+    tag new_tag
+    <selector>
+      labels app:nginx,env:dev
+      namespace default
+    </selector>
+  </route>
+</match>
+```
+
+### 2. Exclude specific `labels` and `namespaces`
+Configuration to re-tag and re-label all logs that **not** from `default` namespace **and not** have labels `ap=nginx` and `env=dev`
+```
+<match example.tag**>
+  @type label_router
+  <route>
+    @label @NGINX
+    tag new_tag
+    <exclude>
+      labels app:nginx,env:dev
+      namespace default
+    </exclude>
   </route>
 </match>
 ```
@@ -91,9 +121,11 @@ Only `labels`
 <match example.tag**>
   @type label_router
   <route>
-     labels app:nginx
-     @label @NGINX
-     tag new_tag
+    @label @NGINX
+    tag new_tag
+    <selector>
+      labels app:nginx
+    </selector>
   </route>
 </match>
 ```
@@ -102,9 +134,11 @@ Only `namespace`
 <match example.tag**>
   @type label_router
   <route>
-     namespace default
-     @label @NGINX
-     tag new_tag
+    @label @NGINX
+    tag new_tag
+    <selector>
+      namespace default
+    </selector>
   </route>
 </match>
 ```
@@ -113,8 +147,8 @@ Rewrite all
 <match example.tag**>
   @type label_router
   <route>
-     @label @NGINX
-     tag new_tag
+    @label @NGINX
+    tag new_tag
   </route>
 </match>
 ```

@@ -26,33 +26,74 @@ module Fluent
       #record_accessor_create("log")
       #record_accessor_create("$.key1.key2")
       #record_accessor_create("$['key1'][0]['key2']")
+      desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
+      config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
+      desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
+      config_param :sticky_tags, :bool, default: true
 
       config_section :route, param_name: :routes, multi: true do
-        desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
-        config_param :labels, :hash, :default => {}
-        desc "Namespaces definition to filter the record. Ignored if left empty."
-        config_param :namespace, :string, :default => ""
         desc "New @LABEL if selectors matched"
         config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
-        desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
-        config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
-        desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
-        config_param :sticky_tags, :bool, default: true
+
+        config_section :selector, param_name: :selectors, multi: true do
+          desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
+          config_param :labels, :hash, :default => {}
+          desc "List of namespace definition to filter the record. Ignored if left empty."
+          config_param :namespaces, :array, :default => [], value_type: :string
+        end
+
+        config_section :exclude, param_name: :excludes, multi: true do
+          desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
+          config_param :labels, :hash, :default => {}
+          desc "List of namespace definition to filter the record. Ignored if left empty."
+          config_param :namespaces, :array, :default => [], value_type: :string
+        end
+
       end
 
+
+
       class Route
-        def initialize(selector, namespace, tag, router)
+        def initialize(selectors, excludes, tag, router)
           @router = router
-          @selector = selector
-          @namespace = namespace
+          @selectors = selectors
+          @excludes = excludes
           @tag = tag
         end
 
+        # Evaluate selectors, excludes
         def match?(labels, namespace)
-          # Match labels and namespace if defined
-          return (match_labels(labels, @selector) and (@namespace ==  "" or namespace == @namespace))
+          @excludes.each do |exclude|
+            unless filter_exclude(exclude, labels, namespace)
+              return false
+            end
+          end
+          @selectors.each do |selector|
+            unless filter_select(selector, labels, namespace)
+              return false
+            end
+          end
+          true
+        end
+
+        # Returns true if filter passes (no exclude match)
+        def filter_exclude(exclude, labels, namespace)
+          # Break if list of namespaces is not empty and does not include actual namespace
+          unless exclude.namespaces.empty? or !exclude.namespaces.include?(namespace)
+            return false
+          end
+          !match_labels(labels, exclude.labels)
+        end
+
+        # Returns true if filter passes (filter match)
+        def filter_select(selector, labels, namespace)
+          # Break if list of namespaces is not empty and does not include actual namespace
+          unless selector.namespaces.empty? or selector.namespaces.include?(namespace)
+            return false
+          end
+          match_labels(labels, selector.labels)
         end
 
         def emit(tag, time, record)
@@ -115,7 +156,7 @@ module Fluent
         @routers = []
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
-          @routers << Route.new(rule.labels, rule.namespace.to_s, rule.tag.to_s, route_router)
+          @routers << Route.new(rule.selectors, rule.excludes, rule.tag.to_s, route_router)
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
