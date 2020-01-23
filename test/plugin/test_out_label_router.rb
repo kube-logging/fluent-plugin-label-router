@@ -41,9 +41,10 @@ class LabelRouterOutputTest < Test::Unit::TestCase
   <selector>
     labels app:app1
   </selector>
-  <exclude>
+  <selector>
     labels app2:app2
-  </exclude>
+    negate true
+  </selector>
   tag new_app_tag
 </route>
 <route>
@@ -51,25 +52,26 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     labels app:app1
     namespaces default,test
   </selector>
-  <exclude>
+  <selector>
     labels app:app2
     namespaces system
-  </exclude>
+    negate true
+  </selector>
   tag new_app_tag
 </route>
 ]
       d = Fluent::Test::Driver::BaseOwner.new(Fluent::Plugin::LabelRouterOutput)
       d.configure(routing_conf)
-      r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].selectors, d.instance.routes[0].excludes, "",nil)
-      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, d.instance.routes[1].excludes, "",nil)
+      r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].selectors, "",nil)
+      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, "",nil)
       # Match selector
       assert_equal(true, r1.match?({"app" => "app1"},""))
       # Exclude via label
-      assert_equal(false, r1.match?({"app" => "app1", "app2" => "app2"},""))
+      assert_equal(false, r1.match?({"app2" => "app2"},""))
       # Match selector and namespace
       assert_equal(true, r2.match?({"app" => "app1"},"test"))
       # Exclude via namespace
-      assert_equal(false, r2.match?({"app" => "app1"},"system"))
+      assert_equal(false, r2.match?({"app" => "app2"},"system"))
     end
   end
 
