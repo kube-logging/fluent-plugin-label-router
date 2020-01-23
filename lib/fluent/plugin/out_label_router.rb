@@ -37,7 +37,7 @@ module Fluent
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
 
-        config_section :selector, param_name: :selectors, multi: true do
+        config_section :match, param_name: :selectors, multi: true do
           desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
           config_param :labels, :hash, :default => {}
           desc "List of namespace definition to filter the record. Ignored if left empty."
@@ -58,7 +58,7 @@ module Fluent
         end
 
         # Evaluate selectors
-        # We evaluate <select> statements in order:
+        # We evaluate <match> statements in order:
         # 1. If match == true and negate == false -> return true
         # 2. If match == true and negate == true -> continue
         # 3. If match == false and negate == false -> continue

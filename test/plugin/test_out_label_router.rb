@@ -38,25 +38,25 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     test 'basic configuration' do
       routing_conf = %[
 <route>
-  <selector>
+  <match>
     labels app:app1
-  </selector>
-  <selector>
+  </match>
+  <match>
     labels app2:app2
     negate true
-  </selector>
+  </match>
   tag new_app_tag
 </route>
 <route>
-  <selector>
+  <match>
     labels app:app1
     namespaces default,test
-  </selector>
-  <selector>
+  </match>
+  <match>
     labels app:app2
     namespaces system
     negate true
-  </selector>
+  </match>
   tag new_app_tag
 </route>
 ]
@@ -79,9 +79,9 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     test 'normal' do
       CONFIG = %[
 <route>
-  <selector>
+  <match>
     labels app:app1
-  </selector>
+  </match>
   tag new_app_tag
 </route>
 ]

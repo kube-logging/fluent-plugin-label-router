@@ -33,7 +33,7 @@ $ bundle
 ## Configuration
 
 The configuration builds from `<route>` sections. Each `route` section
-can have several `<select>` statement. These statements computed in order and
+can have several `<match>` statement. These statements computed in order and
 positive (or in case of *negate true* negative) results break the evaluation.
 We can say that the sections are coupled in a **lazy evaluation OR**. 
 
@@ -44,13 +44,13 @@ We can say that the sections are coupled in a **lazy evaluation OR**.
      ...
   </route>
   <route>
-    <select>
+    <match>
       ...
-    </select>
-    <select> #Exclude
+    </match>
+    <match> #Exclude
       negate true
       ...
-    </select>
+    </match>
   </route>
 </match>
 ```
@@ -61,7 +61,7 @@ We can say that the sections are coupled in a **lazy evaluation OR**.
 | tag         | New tag if selectors matched                                                                           | ""      |
 | emit_mode   | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | batch   |
 | sticky_tags | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true    |
-| selector    | Select the log if match with parameters defined                                                        | nil     |
+| match       | Select the log if match with parameters defined                                                        | nil     |
 
 #### Selectors / Excludes
 | Parameter  | Description                                                                   | Default |
@@ -93,10 +93,10 @@ Configuration to re-tag and re-label all logs from `default` namespace with labe
   <route>
     @label @NGINX
     tag new_tag
-    <selector>
+    <match>
       labels app:nginx,env:dev
       namespaces default
-    </selector>
+    </match>
   </route>
 </match>
 ```
@@ -109,11 +109,11 @@ Configuration to re-tag and re-label all logs that **not** from `default` namesp
   <route>
     @label @NGINX
     tag new_tag
-    <selector>
+    <match>
       negate true
       labels app:nginx,env:dev
       namespaces default
-    </selector>
+    </match>
   </route>
 </match>
 ```
@@ -140,9 +140,9 @@ Only `labels`
   <route>
     @label @NGINX
     tag new_tag
-    <selector>
+    <match>
       labels app:nginx
-    </selector>
+    </match>
   </route>
 </match>
 ```
@@ -153,9 +153,9 @@ Only `namespace`
   <route>
     @label @NGINX
     tag new_tag
-    <selector>
+    <match>
       namespaces default
-    </selector>
+    </match>
   </route>
 </match>
 ```
@@ -163,10 +163,10 @@ Rewrite all
 ```
 <match example.tag**>
   @type label_router
-  <route>
+  <match>
     @label @NGINX
     tag new_tag
-  </route>
+  </match>
 </match>
 ```
 
