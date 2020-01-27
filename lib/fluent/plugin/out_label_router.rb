@@ -26,33 +26,62 @@ module Fluent
       #record_accessor_create("log")
       #record_accessor_create("$.key1.key2")
       #record_accessor_create("$['key1'][0]['key2']")
+      desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
+      config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
+      desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
+      config_param :sticky_tags, :bool, default: true
 
       config_section :route, param_name: :routes, multi: true do
-        desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
-        config_param :labels, :hash, :default => {}
-        desc "Namespaces definition to filter the record. Ignored if left empty."
-        config_param :namespace, :string, :default => ""
         desc "New @LABEL if selectors matched"
         config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
-        desc "Emit mode. If `batch`, the plugin will emit events per labels matched."
-        config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
-        desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
-        config_param :sticky_tags, :bool, default: true
+
+        config_section :match, param_name: :selectors, multi: true do
+          desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
+          config_param :labels, :hash, :default => {}
+          desc "List of namespace definition to filter the record. Ignored if left empty."
+          config_param :namespaces, :array, :default => [], value_type: :string
+          desc "Negate the selection making it an exclude"
+          config_param :negate, :bool, :default => false
+        end
+
       end
 
+
+
       class Route
-        def initialize(selector, namespace, tag, router)
+        def initialize(selectors, tag, router)
           @router = router
-          @selector = selector
-          @namespace = namespace
+          @selectors = selectors
           @tag = tag
         end
 
+        # Evaluate selectors
+        # We evaluate <match> statements in order:
+        # 1. If match == true and negate == false -> return true
+        # 2. If match == true and negate == true -> continue
+        # 3. If match == false and negate == false -> continue
+        # 4. If match == false and negate == true -> return true
         def match?(labels, namespace)
-          # Match labels and namespace if defined
-          return (match_labels(labels, @selector) and (@namespace ==  "" or namespace == @namespace))
+          @selectors.each do |selector|
+             if (filter_select(selector, labels, namespace) and !selector.negate)
+               return true
+             end
+            if (!filter_select(selector, labels, namespace) and selector.negate)
+              return true
+            end
+          end
+          false
+        end
+
+        # Returns true if filter passes (filter match)
+        def filter_select(selector, labels, namespace)
+          # Break if list of namespaces is not empty and does not include actual namespace
+          unless selector.namespaces.empty? or selector.namespaces.include?(namespace)
+            return false
+          end
+          match_labels(labels, selector.labels)
         end
 
         def emit(tag, time, record)
@@ -115,7 +144,8 @@ module Fluent
         @routers = []
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
-          @routers << Route.new(rule.labels, rule.namespace.to_s, rule.tag.to_s, route_router)
+          puts rule
+          @routers << Route.new(rule.selectors, rule.tag.to_s, route_router)
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
