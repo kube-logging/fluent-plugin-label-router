@@ -68,10 +68,14 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       assert_equal(true, r1.match?({"app" => "app1"},""))
       # Exclude via label
       assert_equal(false, r1.match?({"app2" => "app2"},""))
+      # Not presented value in exclude
+      assert_equal(true, r1.match?({"app3" => "app2"},""))
       # Match selector and namespace
       assert_equal(true, r2.match?({"app" => "app1"},"test"))
       # Exclude via namespace
       assert_equal(false, r2.match?({"app" => "app2"},"system"))
+      # Excluded namespace but not matching labels
+      assert_equal(true, r2.match?({"app3" => "app"},"system"))
     end
   end
 
