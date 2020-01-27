@@ -72,16 +72,15 @@ We can say that the sections are coupled in a **lazy evaluation OR**.
 
 ## Rules of thumb
 
-1. Defining more than one namespace in `namespaces` inside a `select` statement
-is impossible to match because a Pod only lives in one namespace. This is only effective when
-`negate true`.
+1. Defining more than one namespace in `namespaces` inside a `match` statement
+will check whether any of that namespaces matches.
 
 2. Using `sticky_tags` means that only the **first** record will be analysed per `tag`.
 Keep that in mind if you are ingesting traffic that is not unique on a per tag bases.
 Fluentd and fluent-bit tail logs from Kubernetes are unique per container.
 
 3. The plugin does not check if the configuration is valid so be careful to not define
-impossible statements.
+impossible statements like identical `match` statement with negate.
 
 ## Examples
 

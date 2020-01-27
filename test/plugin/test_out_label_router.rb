@@ -59,23 +59,35 @@ class LabelRouterOutputTest < Test::Unit::TestCase
   </match>
   tag new_app_tag
 </route>
+<route>
+  <match>
+    labels app:nginx
+    namespaces dev,sandbox
+  </match>
+</route>
 ]
       d = Fluent::Test::Driver::BaseOwner.new(Fluent::Plugin::LabelRouterOutput)
       d.configure(routing_conf)
+
       r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].selectors, "",nil)
-      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, "",nil)
       # Match selector
       assert_equal(true, r1.match?({"app" => "app1"},""))
       # Exclude via label
       assert_equal(false, r1.match?({"app2" => "app2"},""))
       # Not presented value in exclude
       assert_equal(true, r1.match?({"app3" => "app2"},""))
+
+      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, "",nil)
       # Match selector and namespace
       assert_equal(true, r2.match?({"app" => "app1"},"test"))
       # Exclude via namespace
       assert_equal(false, r2.match?({"app" => "app2"},"system"))
       # Excluded namespace but not matching labels
       assert_equal(true, r2.match?({"app3" => "app"},"system"))
+
+      r3 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[2].selectors, "",nil)
+      assert_equal(true, r2.match?({"app" => "nginx"},"dev"))
+      assert_equal(true, r2.match?({"app" => "nginx"},"sandbox"))
     end
   end
 
