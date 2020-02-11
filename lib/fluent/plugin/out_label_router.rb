@@ -30,6 +30,10 @@ module Fluent
       config_param :emit_mode, :enum, list: [:record, :batch], default: :batch
       desc "Sticky tags will match only one record from an event stream. The same tag will be treated the same way"
       config_param :sticky_tags, :bool, default: true
+      desc "Default label to drain unmatched patterns"
+      config_param :default_route, :string, :default => ""
+      desc "Default tag to drain unmatched patterns"
+      config_param :default_tag, :string, :default => ""
 
       config_section :route, param_name: :routes, multi: true do
         desc "New @LABEL if selectors matched"
@@ -59,17 +63,18 @@ module Fluent
 
         # Evaluate selectors
         # We evaluate <match> statements in order:
-        # 1. If match == true and negate == false -> return true
-        # 2. If match == true and negate == true -> continue
+        # 1. If match == true and negate == false  -> return true
+        # 2. If match == true and negate == true   -> return false
         # 3. If match == false and negate == false -> continue
-        # 4. If match == false and negate == true -> return true
+        # 4. If match == false and negate == true  -> continue
+        # There is no match at all                 -> return false
         def match?(labels, namespace)
           @selectors.each do |selector|
-             if (filter_select(selector, labels, namespace) and !selector.negate)
-               return true
-             end
-            if (!filter_select(selector, labels, namespace) and selector.negate)
+            if (filter_select(selector, labels, namespace) and !selector.negate)
               return true
+            end
+            if (filter_select(selector, labels, namespace) and selector.negate)
+              return false
             end
           end
           false
@@ -118,8 +123,10 @@ module Fluent
         es.each do |time, record|
           input_labels = @access_to_labels.call(record).to_h
           input_namespace = @access_to_namespace.call(record).to_s
+          orphan_record = true
           @routers.each do |r|
             if r.match?(input_labels, input_namespace)
+              orphan_record = false
               if @sticky_tags
                 @route_map[tag].push(r)
               end
@@ -128,6 +135,16 @@ module Fluent
               else
                 r.emit(tag, time, record.dup)
               end
+            end
+          end
+          if !@default_router.nil? && orphan_record
+            if @sticky_tags
+              @route_map[tag].push(@default_router)
+            end
+            if @batch
+              event_stream[@default_router].add(time, record)
+            else
+              @default_router.emit(tag, time, record.dup)
             end
           end
           if @batch
@@ -142,10 +159,15 @@ module Fluent
         super
         @route_map = Hash.new { |h, k| h[k] = Array.new }
         @routers = []
+        @default_router = nil
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
           puts rule
           @routers << Route.new(rule.selectors, rule.tag.to_s, route_router)
+        end
+
+        if @default_route != '' or @default_tag != ''
+          @default_router = Route.new(nil, @default_tag, event_emitter_router(@default_route))
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
