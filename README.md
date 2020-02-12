@@ -57,28 +57,28 @@ We can say that the sections are coupled in a **lazy evaluation OR**.
 
 Configuration reference
 
-| Parameter     | Description                                                                                            | Default |
-|---------------|--------------------------------------------------------------------------------------------------------|---------|
-| emit_mode     | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | batch   |
-| sticky_tags   | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true    |
-| default_route | If defined all non-matching record passes to this label.                                               |  ""     |
-| default_tag   | If defined all non-matching record rewrited to this tag. (Can be used with label simoultanesly)        |  ""     |
-| \<route\>     | Route the log if match with parameters defined                                                         | nil     |
+| Parameter     | Description                                                                                            | Type    | Default |
+|---------------|--------------------------------------------------------------------------------------------------------|---------|---------|
+| emit_mode     | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | enum    | batch   |
+| sticky_tags   | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | bool    | true    |
+| default_route | If defined all non-matching record passes to this label.                                               | string  |  ""     |
+| default_tag   | If defined all non-matching record rewrited to this tag. (Can be used with label simoultanesly)        | string  |  ""     |
+| \<route\>     | Route the log if match with parameters defined                                                         | []route | nil     |
 
 #### \<route\>
-| Parameter     | Description                                                                                            | Default |
-|---------------|--------------------------------------------------------------------------------------------------------|---------|
-| @label        | Route the matching record to the given `label`                                                         | ""      |
-| tag           | Tag the matching record to the given `tag`                                                             | ""      |
-| \<match\>     | List of match statements. Repeatable.                                                                  | nil     |
+| Parameter     | Description                                                                                            | Type    | Default |
+|---------------|--------------------------------------------------------------------------------------------------------|---------|---------|
+| @label        | Route the matching record to the given `label`                                                         | string  | ""      |
+| tag           | Tag the matching record to the given `tag`                                                             | string  | ""      |
+| \<match\>     | List of match statements. Repeatable.                                                                  | []match | nil     |
 
 
 #### \<match\>
-| Parameter  | Description                                                                   | Default |
-|------------|-------------------------------------------------------------------------------|---------|
-| labels     | Label definition to match record. Example: app:nginx                          | nil     |
-| namespaces | Namespaces definition to filter the record. Ignored if left empty.            | []      |
-| negate     | Negate the selector meaning to exclude matches                                | false   |
+| Parameter  | Description                                                                   | Type     | Default  |
+|------------|-------------------------------------------------------------------------------|----------|----------|
+| labels     | Label definition to match record. Example: `app:nginx`                        | Hash     | nil      |
+| namespaces | Comma separated list of namespaces. Ignored if left empty.                    | []string | nil      |
+| negate     | Negate the selector meaning to exclude matches                                | bool     | false    |
 
 ## Rules of thumb
 
