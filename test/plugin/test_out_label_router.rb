@@ -36,7 +36,7 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 
   sub_test_case 'test_routing' do
     test 'basic configuration' do
-      routing_conf = %[
+      routing_conf = %(
 <route>
   <match>
     labels app:app1
@@ -65,29 +65,29 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     namespaces dev,sandbox
   </match>
 </route>
-]
+)
       d = Fluent::Test::Driver::BaseOwner.new(Fluent::Plugin::LabelRouterOutput)
       d.configure(routing_conf)
 
       r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].selectors, "",nil)
-      # Match selector
-      assert_equal(true, r1.match?({"app" => "app1"},""))
-      # Exclude via label
-      assert_equal(false, r1.match?({"app2" => "app2"},""))
-      # Not presented value in exclude
-      assert_equal(true, r1.match?({"app3" => "app2"},""))
+      # Selector matched: GO
+      assert_equal(true, r1.match?({'app' => 'app1'},""))
+      # Exclude match: NO GO
+      assert_equal(false, r1.match?({"app" => "app2"},""))
+      # Nothing matched: NO GO
+      assert_equal(false, r1.match?({"app3" => "app2"},""))
 
       r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, "",nil)
-      # Match selector and namespace
+      # Match selector and namespace: GO
       assert_equal(true, r2.match?({"app" => "app1"},"test"))
       # Exclude via namespace
       assert_equal(false, r2.match?({"app" => "app2"},"system"))
-      # Excluded namespace but not matching labels
-      assert_equal(true, r2.match?({"app3" => "app"},"system"))
+      # Nothing matched: NO GO
+      assert_equal(false, r2.match?({"app3" => "app"},"system"))
 
       r3 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[2].selectors, "",nil)
-      assert_equal(true, r2.match?({"app" => "nginx"},"dev"))
-      assert_equal(true, r2.match?({"app" => "nginx"},"sandbox"))
+      assert_equal(true, r3.match?({"app" => "nginx"},"dev"))
+      assert_equal(true, r3.match?({"app" => "nginx"},"sandbox"))
     end
   end
 
@@ -113,6 +113,61 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 
       assert_equal(1, events.size)
       assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } }], events[0]
+    end
+  end
+
+  sub_test_case 'test_default_router' do
+    test 'normal' do
+      CONFIG2 = %[
+<route>
+  <match>
+    labels app:app1
+  </match>
+  tag new_app_tag
+</route>
+default_route @default
+default_tag "new_tag"
+]
+      event_time = event_time("2019-07-17 11:11:11 UTC")
+      d = create_driver(CONFIG2)
+      d.run(default_tag: 'test') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+      end
+      d.run(default_tag: 'test2') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
+      end
+      events = d.events
+
+      assert_equal(2, events.size)
+      assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } }], events[0]
+      assert_equal ["new_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } }], events[1]
+    end
+  end
+
+  sub_test_case 'test_empty_router' do
+    test 'normal' do
+      CONFIG2 = %[
+<route>
+  tag new_app_tag
+  <match>
+    labels
+    namespaces
+  </match>
+</route>
+]
+      event_time = event_time("2019-07-17 11:11:11 UTC")
+      d = create_driver(CONFIG2)
+      d.run(default_tag: 'test') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+      end
+      d.run(default_tag: 'test2') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
+      end
+      events = d.events
+
+      assert_equal(2, events.size)
+      assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } }], events[0]
+      assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } }], events[1]
     end
   end
 end

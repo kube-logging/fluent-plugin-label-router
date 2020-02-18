@@ -55,20 +55,30 @@ We can say that the sections are coupled in a **lazy evaluation OR**.
 </match>
 ```
 
-| Parameter   | Description                                                                                            | Default |
-|-------------|--------------------------------------------------------------------------------------------------------|---------|
-| @label      | New @LABEL if selectors matched                                                                        | nil     |
-| tag         | New tag if selectors matched                                                                           | ""      |
-| emit_mode   | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | batch   |
-| sticky_tags | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | true    |
-| match       | Select the log if match with parameters defined                                                        | nil     |
+Configuration reference
 
-#### Selectors / Excludes
-| Parameter  | Description                                                                   | Default |
-|------------|-------------------------------------------------------------------------------|---------|
-| labels     | Label definition to match record. Example: app:nginx                          | nil     |
-| namespaces | Namespaces definition to filter the record. Ignored if left empty.            | []      |
-| negate     | Negate the selector meaning to exclude matches                                | false   |
+| Parameter     | Description                                                                                            | Type    | Default |
+|---------------|--------------------------------------------------------------------------------------------------------|---------|---------|
+| emit_mode     | Emit mode. If `batch`, the plugin will emit events per labels matched. Enum: record, batch             | enum    | batch   |
+| sticky_tags   | Sticky tags will match only one record from an event stream. The same tag will be treated the same way | bool    | true    |
+| default_route | If defined all non-matching record passes to this label.                                               | string  |  ""     |
+| default_tag   | If defined all non-matching record rewrited to this tag. (Can be used with label simoultanesly)        | string  |  ""     |
+| \<route\>     | Route the log if match with parameters defined                                                         | []route | nil     |
+
+#### \<route\>
+| Parameter     | Description                                                                                            | Type    | Default |
+|---------------|--------------------------------------------------------------------------------------------------------|---------|---------|
+| @label        | Route the matching record to the given `label`                                                         | string  | ""      |
+| tag           | Tag the matching record to the given `tag`                                                             | string  | ""      |
+| \<match\>     | List of match statements. Repeatable.                                                                  | []match | nil     |
+
+
+#### \<match\>
+| Parameter  | Description                                                                   | Type     | Default  |
+|------------|-------------------------------------------------------------------------------|----------|----------|
+| labels     | Label definition to match record. Example: `app:nginx`                        | Hash     | nil      |
+| namespaces | Comma separated list of namespaces. Ignored if left empty.                    | []string | nil      |
+| negate     | Negate the selector meaning to exclude matches                                | bool     | false    |
 
 ## Rules of thumb
 
@@ -80,7 +90,8 @@ Keep that in mind if you are ingesting traffic that is not unique on a per tag b
 Fluentd and fluent-bit tail logs from Kubernetes are unique per container.
 
 3. The plugin does not check if the configuration is valid so be careful to not define
-impossible statements like identical `match` statement with negate.
+ statements like identical `match` statement with negate because the negate rule will never
+ be evaluated.
 
 ## Examples
 
@@ -171,6 +182,21 @@ Rewrite all
 
 ### 3. One of `@label` ot `tag` configuration should be specified
 If you don't rewrite either of them fluent will **likely to crash** because it will reprocess the same messages again.
+
+### 4. Default route/tag
+
+Use `default_label` and/or `default_tag` to route non matching records.
+
+```
+<match example.tag**>
+  @type label_router
+  default_label @default_sink
+  <route>
+     ...
+  </route>
+</match>
+```
+
 
 ## Copyright
 
