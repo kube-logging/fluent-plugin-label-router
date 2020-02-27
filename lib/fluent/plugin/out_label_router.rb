@@ -41,11 +41,15 @@ module Fluent
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
 
-        config_section :match, param_name: :selectors, multi: true do
+        config_section :match, param_name: :matches, multi: true do
           desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
           config_param :labels, :hash, :default => {}
           desc "List of namespace definition to filter the record. Ignored if left empty."
           config_param :namespaces, :array, :default => [], value_type: :string
+          desc "List of hosts definition to filter the record. Ignored if left empty."
+          config_param :hosts, :array, :default => [], value_type: :string
+          desc "List of container names definition to filter the record. Ignored if left empty."
+          config_param :container_names, :array, :default => [], value_type: :string
           desc "Negate the selection making it an exclude"
           config_param :negate, :bool, :default => false
         end
@@ -55,9 +59,9 @@ module Fluent
 
 
       class Route
-        def initialize(selectors, tag, router)
+        def initialize(matches, tag, router)
           @router = router
-          @selectors = selectors
+          @matches = matches
           @tag = tag
         end
 
@@ -68,12 +72,12 @@ module Fluent
         # 3. If match == false and negate == false -> continue
         # 4. If match == false and negate == true  -> continue
         # There is no match at all                 -> return false
-        def match?(labels, namespace)
-          @selectors.each do |selector|
-            if (filter_select(selector, labels, namespace) and !selector.negate)
+        def match?(metadata)
+          @matches.each do |match|
+            if filter_select(match, metadata) and !match.negate
               return true
             end
-            if (filter_select(selector, labels, namespace) and selector.negate)
+            if filter_select(match, metadata) and match.negate
               return false
             end
           end
@@ -81,12 +85,21 @@ module Fluent
         end
 
         # Returns true if filter passes (filter match)
-        def filter_select(selector, labels, namespace)
-          # Break if list of namespaces is not empty and does not include actual namespace
-          unless selector.namespaces.empty? or selector.namespaces.include?(namespace)
+        def filter_select(match, metadata)
+          # Break on container_name mismatch
+          unless match.hosts.empty? || match.hosts.include?(metadata[:host])
             return false
           end
-          match_labels(labels, selector.labels)
+          # Break on host mismatch
+          unless match.container_names.empty? || match.container_names.include?(metadata[:container_name])
+            return false
+          end
+          # Break if list of namespaces is not empty and does not include actual namespace
+          unless match.namespaces.empty? || match.namespaces.include?(metadata[:namespace])
+            return false
+          end
+
+          match_labels(metadata[:labels], match.labels)
         end
 
         def emit(tag, time, record)
@@ -104,8 +117,9 @@ module Fluent
             @router.emit_stream(@tag, es)
           end
         end
+
         def match_labels(input, match)
-          return (match.to_a - input.to_a).empty?
+          (match.to_a - input.to_a).empty?
         end
       end
 
@@ -121,11 +135,13 @@ module Fluent
         end
         event_stream = Hash.new {|h, k| h[k] = Fluent::MultiEventStream.new }
         es.each do |time, record|
-          input_labels = @access_to_labels.call(record).to_h
-          input_namespace = @access_to_namespace.call(record).to_s
+          input_metadata = { labels: @access_to_labels.call(record).to_h,
+                             namespace: @access_to_namespace.call(record).to_s,
+                             container: @access_to_container_name.call(record).to_s,
+                             host: @access_to_host.call(record).to_s}
           orphan_record = true
           @routers.each do |r|
-            if r.match?(input_labels, input_namespace)
+            if r.match?(input_metadata)
               orphan_record = false
               if @sticky_tags
                 @route_map[tag].push(r)
@@ -163,7 +179,7 @@ module Fluent
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
           puts rule
-          @routers << Route.new(rule.selectors, rule.tag.to_s, route_router)
+          @routers << Route.new(rule.matches, rule.tag.to_s, route_router)
         end
 
         if @default_route != '' or @default_tag != ''
@@ -172,6 +188,8 @@ module Fluent
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
         @access_to_namespace = record_accessor_create("$.kubernetes.namespace_name")
+        @access_to_host = record_accessor_create("$.kubernetes.host")
+        @access_to_container_name = record_accessor_create("$.kubernetes.container_name")
 
         @batch = @emit_mode == :batch
       end

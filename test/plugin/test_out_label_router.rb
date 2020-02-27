@@ -65,29 +65,47 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     namespaces dev,sandbox
   </match>
 </route>
+<route>
+  <match>
+    labels app:nginx
+    namespaces dev,sandbox
+    container_names mycontainer
+  </match>
+</route>
 )
       d = Fluent::Test::Driver::BaseOwner.new(Fluent::Plugin::LabelRouterOutput)
       d.configure(routing_conf)
 
-      r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].selectors, "",nil)
+      r1 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[0].matches, d.instance.routes[0].tag,nil)
       # Selector matched: GO
-      assert_equal(true, r1.match?({'app' => 'app1'},""))
+      assert_equal(true, r1.match?(labels: { 'app' => 'app1' }, namespace: ''))
       # Exclude match: NO GO
-      assert_equal(false, r1.match?({"app" => "app2"},""))
+      assert_equal(false, r1.match?(labels: { 'app' => 'app2' }, namespace: ''))
       # Nothing matched: NO GO
-      assert_equal(false, r1.match?({"app3" => "app2"},""))
+      assert_equal(false, r1.match?(labels: { 'app3' => 'app2' }, namespace: ''))
 
-      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].selectors, "",nil)
+      r2 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[1].matches, d.instance.routes[1].tag,nil)
       # Match selector and namespace: GO
-      assert_equal(true, r2.match?({"app" => "app1"},"test"))
+      assert_equal(true, r2.match?(labels: { 'app' => 'app1' }, namespace: 'test'))
       # Exclude via namespace
-      assert_equal(false, r2.match?({"app" => "app2"},"system"))
+      assert_equal(false, r2.match?(labels: { 'app' => 'app2' }, namespace: 'system'))
       # Nothing matched: NO GO
-      assert_equal(false, r2.match?({"app3" => "app"},"system"))
+      assert_equal(false, r2.match?(labels: { 'app3' => 'app' }, namespace: 'system'))
 
-      r3 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[2].selectors, "",nil)
-      assert_equal(true, r3.match?({"app" => "nginx"},"dev"))
-      assert_equal(true, r3.match?({"app" => "nginx"},"sandbox"))
+      r3 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[2].matches, d.instance.routes[2].tag,nil)
+      assert_equal(true, r3.match?(labels: { 'app' => 'nginx' }, namespace: 'dev'))
+      assert_equal(true, r3.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
+      assert_equal(false, r3.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox'))
+
+      r4 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[3].matches, d.instance.routes[3].tag,nil)
+      # Matching container name
+      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container_name: 'mycontainer'))
+      # Missing container name is equal to wrong container
+      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
+      # Wrong container name
+      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container_name: 'mycontainer2'))
+      # Wrong label but good namespace and container_name
+      assert_equal(false, r4.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox',  container_name: 'mycontainer2'))
     end
   end
 
@@ -146,7 +164,7 @@ default_tag "new_tag"
 
   sub_test_case 'test_empty_router' do
     test 'normal' do
-      CONFIG2 = %[
+      CONFIG3 = %[
 <route>
   tag new_app_tag
   <match>
@@ -156,7 +174,7 @@ default_tag "new_tag"
 </route>
 ]
       event_time = event_time("2019-07-17 11:11:11 UTC")
-      d = create_driver(CONFIG2)
+      d = create_driver(CONFIG3)
       d.run(default_tag: 'test') do
         d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
       end
