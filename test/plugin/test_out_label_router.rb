@@ -134,6 +134,26 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     end
   end
 
+
+  sub_test_case 'test_multiple_events_batched' do
+    test 'normal' do
+      conf = %[
+<route>
+  <match>
+  </match>
+</route>
+]
+      event_time = event_time("2019-07-17 11:11:11 UTC")
+      d = create_driver(conf)
+      d.run(expect_emits: 1, expect_records: 2) do
+        d.feed("test", [
+          [event_time, {"kubernetes" => {} } ],
+          [event_time, {"kubernetes" => {} } ],
+        ])
+      end
+    end
+  end
+
   sub_test_case 'test_default_router' do
     test 'normal' do
       CONFIG2 = %[
@@ -148,11 +168,11 @@ default_tag "new_tag"
 ]
       event_time = event_time("2019-07-17 11:11:11 UTC")
       d = create_driver(CONFIG2)
-      d.run(default_tag: 'test') do
-        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
-      end
-      d.run(default_tag: 'test2') do
-        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
+      d.run() do
+        d.feed("test", [
+          [event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } ],
+          [event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } ],
+        ])
       end
       events = d.events
 

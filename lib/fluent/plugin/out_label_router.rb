@@ -53,10 +53,7 @@ module Fluent
           desc "Negate the selection making it an exclude"
           config_param :negate, :bool, :default => false
         end
-
       end
-
-
 
       class Route
         def initialize(matches, tag, router)
@@ -163,10 +160,10 @@ module Fluent
               @default_router.emit(tag, time, record.dup)
             end
           end
-          if @batch
-            event_stream.each do |r, es|
-              r.emit_es(tag, es.dup)
-            end
+        end
+        if @batch
+          event_stream.each do |r, es|
+            r.emit_es(tag, es.dup)
           end
         end
       end
