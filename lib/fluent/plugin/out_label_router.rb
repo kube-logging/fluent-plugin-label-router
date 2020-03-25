@@ -122,13 +122,15 @@ module Fluent
 
       def process(tag, es)
         if @sticky_tags
-          if @route_map.has_key?(tag)
-            # We already matched with this tag send events to the routers
-            @route_map[tag].each do |r|
-              r.emit_es(tag, es.dup)
+          @mutex.synchronize {
+            if @route_map.has_key?(tag)
+              # We already matched with this tag send events to the routers
+              @route_map[tag].each do |r|
+                r.emit_es(tag, es.dup)
+              end
+              return
             end
-            return
-          end
+          }
         end
         event_stream = Hash.new {|h, k| h[k] = Fluent::MultiEventStream.new }
         es.each do |time, record|
@@ -141,7 +143,9 @@ module Fluent
             if r.match?(input_metadata)
               orphan_record = false
               if @sticky_tags
-                @route_map[tag].add(r)
+                @mutex.synchronize {
+                  @route_map[tag].add(r)
+                }
               end
               if @batch
                 event_stream[r].add(time, record)
@@ -152,7 +156,9 @@ module Fluent
           end
           if !@default_router.nil? && orphan_record
             if @sticky_tags
-              @route_map[tag].add(@default_router)
+              @mutex.synchronize {
+                @route_map[tag].add(@default_router)
+              }
             end
             if @batch
               event_stream[@default_router].add(time, record)
@@ -171,6 +177,7 @@ module Fluent
       def configure(conf)
         super
         @route_map = Hash.new { |h, k| h[k] = Set.new }
+        @mutex = Mutex.new
         @routers = []
         @default_router = nil
         @routes.each do |rule|
