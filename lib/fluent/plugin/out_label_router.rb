@@ -141,7 +141,7 @@ module Fluent
             if r.match?(input_metadata)
               orphan_record = false
               if @sticky_tags
-                @route_map[tag].push(r)
+                @route_map[tag].add(r)
               end
               if @batch
                 event_stream[r].add(time, record)
@@ -152,7 +152,7 @@ module Fluent
           end
           if !@default_router.nil? && orphan_record
             if @sticky_tags
-              @route_map[tag].push(@default_router)
+              @route_map[tag].add(@default_router)
             end
             if @batch
               event_stream[@default_router].add(time, record)
@@ -170,7 +170,7 @@ module Fluent
 
       def configure(conf)
         super
-        @route_map = Hash.new { |h, k| h[k] = Array.new }
+        @route_map = Hash.new { |h, k| h[k] = Set.new }
         @routers = []
         @default_router = nil
         @routes.each do |rule|
