@@ -192,7 +192,7 @@ Use `default_label` and/or `default_tag` to route non matching records.
 ```
 <match example.tag**>
   @type label_router
-  default_label @default_sink
+  default_route @default_sink
   <route>
      ...
   </route>
