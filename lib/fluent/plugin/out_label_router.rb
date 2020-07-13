@@ -88,7 +88,7 @@ module Fluent
             return false
           end
           # Break on host mismatch
-          unless match.container_names.empty? || match.container_names.include?(metadata[:container_name])
+          unless match.container_names.empty? || match.container_names.include?(metadata[:container])
             return false
           end
           # Break if list of namespaces is not empty and does not include actual namespace

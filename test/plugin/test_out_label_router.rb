@@ -99,11 +99,11 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 
       r4 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[3].matches, d.instance.routes[3].tag,nil)
       # Matching container name
-      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container_name: 'mycontainer'))
+      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer'))
       # Missing container name is equal to wrong container
       assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
       # Wrong container name
-      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container_name: 'mycontainer2'))
+      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer2'))
       # Wrong label but good namespace and container_name
       assert_equal(false, r4.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox',  container_name: 'mycontainer2'))
     end
