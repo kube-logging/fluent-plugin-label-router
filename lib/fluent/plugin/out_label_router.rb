@@ -11,10 +11,11 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License
 
 require "fluent/plugin/output"
-require 'digest/md5'
+require 'prometheus/client'
+
 
 module Fluent
   module Plugin
@@ -40,6 +41,8 @@ module Fluent
         config_param :@label, :string, :default => nil
         desc "New tag if selectors matched"
         config_param :tag, :string, :default => ""
+        desc "Extra labels for metrics"
+        config_param :metrics_labels, :hash, :default => {}
 
         config_section :match, param_name: :matches, multi: true do
           desc "Label definition to match record. Example: app:nginx. You can specify more values as comma separated list: key1:value1,key2:value2"
@@ -56,10 +59,22 @@ module Fluent
       end
 
       class Route
-        def initialize(matches, tag, router)
+        def initialize(rule, router, registry)
           @router = router
-          @matches = matches
-          @tag = tag
+          @matches = rule['matches']
+          @tag = rule['tag'].to_s
+          @label = rule['@label']
+          @metrics_labels = (rule['metrics_labels'].map { |k, v| [k.to_sym, v] }.to_h if rule['metrics_labels'])
+          @counter = nil
+          unless registry.nil?
+              @counter = registry.counter(:fluentd_router_records_total, "Total number of events router for the flow")
+          end
+        end
+
+        def get_labels
+          default = { 'flow': @label }
+          labels = default.merge(@metrics_labels)
+          labels
         end
 
         # Evaluate selectors
@@ -113,6 +128,8 @@ module Fluent
           else
             @router.emit_stream(@tag, es)
           end
+          # increment the counter for a given label set
+          @counter&.increment(by: es.size, labels: get_labels)
         end
 
         def match_labels(input, match)
@@ -176,18 +193,19 @@ module Fluent
 
       def configure(conf)
         super
+        @registry = (::Prometheus::Client.registry if @metrics)
         @route_map = Hash.new { |h, k| h[k] = Set.new }
         @mutex = Mutex.new
         @routers = []
         @default_router = nil
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
-          puts rule
-          @routers << Route.new(rule.matches, rule.tag.to_s, route_router)
+          @routers << Route.new(rule, route_router, @registry)
         end
 
         if @default_route != '' or @default_tag != ''
-          @default_router = Route.new(nil, @default_tag, event_emitter_router(@default_route))
+          default_rule = { 'matches' => nil, 'tag' => @default_tag, '@label' => @default_route}
+          @default_router = Route.new(default_rule, event_emitter_router(@default_route), @registry)
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
