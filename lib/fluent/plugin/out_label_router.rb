@@ -35,6 +35,8 @@ module Fluent
       config_param :default_route, :string, :default => ""
       desc "Default tag to drain unmatched patterns"
       config_param :default_tag, :string, :default => ""
+      desc "Enable metrics for the router"
+      config_param :metrics, :bool, :default => false
 
       config_section :route, param_name: :routes, multi: true do
         desc "New @LABEL if selectors matched"
