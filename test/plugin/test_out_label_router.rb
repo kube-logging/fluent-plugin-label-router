@@ -212,8 +212,10 @@ default_tag "new_tag"
     sub_test_case 'test_metrics' do
       test 'normal' do
         CONFIG4 = %[
+  @id xxx
   metrics true
   <route>
+    metrics_labels {"id": "test"}
     tag new_app_tag
     <match>
       labels
