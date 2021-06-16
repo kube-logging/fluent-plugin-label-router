@@ -208,4 +208,33 @@ default_tag "new_tag"
       assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } }], events[1]
     end
   end
+
+    sub_test_case 'test_metrics' do
+      test 'normal' do
+        CONFIG4 = %[
+  metrics true
+  <route>
+    tag new_app_tag
+    <match>
+      labels
+      namespaces
+    </match>
+  </route>
+  ]
+        event_time = event_time("2019-07-17 11:11:11 UTC")
+        d = create_driver(CONFIG4)
+        d.run(default_tag: 'test') do
+          d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+        end
+        d.run(default_tag: 'test2') do
+          d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } } )
+        end
+        events = d.events
+
+        assert_equal(2, events.size)
+        assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } }], events[0]
+        assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app2"} } }], events[1]
+      end
+    end
+
 end
