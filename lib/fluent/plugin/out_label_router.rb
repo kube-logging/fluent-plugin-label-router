@@ -69,7 +69,11 @@ module Fluent
           @metrics_labels = (rule['metrics_labels'].map { |k, v| [k.to_sym, v] }.to_h if rule['metrics_labels'])
           @counter = nil
           unless registry.nil?
-              @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events router for the flow", labels: [:flow, :id])
+              if registry.exist?(:fluentd_router_records_total)
+                @counter = registry.get(:fluentd_router_records_total)
+              else
+                @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events router for the flow", labels: [:flow, :id])
+              end
           end
         end
 
