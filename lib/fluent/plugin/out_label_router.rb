@@ -81,11 +81,7 @@ module Fluent
 
         def get_labels
           labels = { 'flow': @label, 'id': "default" }
-          if !@metrics_labels.nil?
-            labels.merge(@metrics_labels)
-          else
-            labels
-          end
+          !@metrics_labels.nil? ? labels.merge(@metrics_labels) : labels
         end
 
         # Evaluate selectors
