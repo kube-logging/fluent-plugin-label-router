@@ -33,6 +33,8 @@ module Fluent
       config_param :sticky_tags, :bool, default: true
       desc "Default label to drain unmatched patterns"
       config_param :default_route, :string, :default => ""
+      desc "Metrics labels for the default_route"
+      config_param :default_metrics_labels, :hash, :default => {}
       desc "Default tag to drain unmatched patterns"
       config_param :default_tag, :string, :default => ""
       desc "Enable metrics for the router"
@@ -72,15 +74,14 @@ module Fluent
               if registry.exist?(:fluentd_router_records_total)
                 @counter = registry.get(:fluentd_router_records_total)
               else
-                @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events router for the flow", labels: [:flow, :id])
+                @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events routed for the flow", labels: [:flow, :id])
               end
           end
         end
 
         def get_labels
-          default = { 'flow': @label }
-          labels = default.merge(@metrics_labels)
-          labels
+          labels = { 'flow': @label, 'id': "default" }
+          !@metrics_labels.nil? ? labels.merge(@metrics_labels) : labels
         end
 
         # Evaluate selectors
@@ -211,7 +212,7 @@ module Fluent
         end
 
         if @default_route != '' or @default_tag != ''
-          default_rule = { 'matches' => nil, 'tag' => @default_tag, '@label' => @default_route}
+          default_rule = { 'matches' => nil, 'tag' => @default_tag, '@label' => @default_route, 'metrics_labels' => @default_metrics_labels }
           @default_router = Route.new(default_rule, event_emitter_router(@default_route), @registry)
         end
 
