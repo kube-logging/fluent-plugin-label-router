@@ -15,6 +15,7 @@
 
 require "fluent/plugin/output"
 require 'prometheus/client'
+require 'concurrent'
 
 
 module Fluent
@@ -147,7 +148,7 @@ module Fluent
 
       def process(tag, es)
         if @sticky_tags
-          @mutex.synchronize {
+          @rwlock.with_read_lock {
             if @route_map.has_key?(tag)
               # We already matched with this tag send events to the routers
               @route_map[tag].each do |r|
@@ -168,7 +169,7 @@ module Fluent
             if r.match?(input_metadata)
               orphan_record = false
               if @sticky_tags
-                @mutex.synchronize {
+                @rwlock.with_write_lock {
                   @route_map[tag].add(r)
                 }
               end
@@ -181,7 +182,7 @@ module Fluent
           end
           if !@default_router.nil? && orphan_record
             if @sticky_tags
-              @mutex.synchronize {
+              @rwlock.with_write_lock {
                 @route_map[tag].add(@default_router)
               }
             end
@@ -203,7 +204,7 @@ module Fluent
         super
         @registry = (::Prometheus::Client.registry if @metrics)
         @route_map = Hash.new { |h, k| h[k] = Set.new }
-        @mutex = Mutex.new
+        @rwlock = Concurrent::ReadWriteLock.new
         @routers = []
         @default_router = nil
         @routes.each do |rule|
