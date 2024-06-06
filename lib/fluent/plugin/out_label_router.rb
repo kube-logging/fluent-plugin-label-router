@@ -53,6 +53,8 @@ module Fluent
           config_param :labels, :hash, :default => {}
           desc "List of namespace definition to filter the record. Ignored if left empty."
           config_param :namespaces, :array, :default => [], value_type: :string
+          desc "List of namespace labels to filter the record based on where it came from. Ignored if left empty."
+          config_param :namespace_labels, :array, :default => [], value_type: :string
           desc "List of hosts definition to filter the record. Ignored if left empty."
           config_param :hosts, :array, :default => [], value_type: :string
           desc "List of container names definition to filter the record. Ignored if left empty."
@@ -115,6 +117,10 @@ module Fluent
           end
           # Break if list of namespaces is not empty and does not include actual namespace
           unless match.namespaces.empty? || match.namespaces.include?(metadata[:namespace])
+            return false
+          end
+          # Break if list of namespace_labels is not empty and does not match actual namespace labels
+          if !match.namespace_labels.empty? && !match_labels(metadata[:namespace_labels], match.namespace_labels)
             return false
           end
 
