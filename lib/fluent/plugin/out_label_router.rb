@@ -54,7 +54,7 @@ module Fluent
           desc "List of namespace definition to filter the record. Ignored if left empty."
           config_param :namespaces, :array, :default => [], value_type: :string
           desc "List of namespace labels to filter the record based on where it came from. Ignored if left empty."
-          config_param :namespace_labels, :array, :default => [], value_type: :string
+          config_param :namespace_labels, :hash, :default => {}
           desc "List of hosts definition to filter the record. Ignored if left empty."
           config_param :hosts, :array, :default => [], value_type: :string
           desc "List of container names definition to filter the record. Ignored if left empty."
@@ -167,6 +167,7 @@ module Fluent
         es.each do |time, record|
           input_metadata = { labels: @access_to_labels.call(record).to_h,
                              namespace: @access_to_namespace.call(record).to_s,
+                             namespace_labels: @access_to_namespace_labels.call(record).to_h,
                              container: @access_to_container_name.call(record).to_s,
                              host: @access_to_host.call(record).to_s}
           orphan_record = true
@@ -223,6 +224,7 @@ module Fluent
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
+        @access_to_namespace_labels = record_accessor_create("$.kubernetes.namespace_labels")
         @access_to_namespace = record_accessor_create("$.kubernetes.namespace_name")
         @access_to_host = record_accessor_create("$.kubernetes.host")
         @access_to_container_name = record_accessor_create("$.kubernetes.container_name")
