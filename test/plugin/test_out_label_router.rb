@@ -72,6 +72,11 @@ class LabelRouterOutputTest < Test::Unit::TestCase
     container_names mycontainer
   </match>
 </route>
+<route>
+  <match>
+    namespaces_labels name:default
+  </match>
+</route>
 )
       d = Fluent::Test::Driver::BaseOwner.new(Fluent::Plugin::LabelRouterOutput)
       d.configure(routing_conf)
@@ -106,6 +111,10 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer2'))
       # Wrong label but good namespace and container_name
       assert_equal(false, r4.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox',  container_name: 'mycontainer2'))
+
+      r4 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[4], nil,nil)
+      # Matching namespaces_labels
+      assert_equal(true, r4.match?(namespaces_labels: { 'name' => 'default' }))
     end
   end
 
@@ -131,6 +140,31 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 
       assert_equal(1, events.size)
       assert_equal ["new_app_tag", event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } }], events[0]
+    end
+  end
+
+  sub_test_case 'test_namespaces_labels' do
+    test 'normal' do
+      CONFIG = %[
+<route>
+  <match>
+    namespace_labels matching:yes
+  </match>
+  tag matching
+</route>
+]
+      event_time = event_time("2019-07-17 11:11:11 UTC")
+      d = create_driver(CONFIG)
+      d.run(default_tag: 'test') do
+        d.feed(event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "no"} } } )
+      end
+      d.run(default_tag: 'test2') do
+        d.feed(event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "yes"} } } )
+      end
+      events = d.events
+
+      assert_equal(1, events.size)
+      assert_equal ["matching", event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "yes"} } }], events[0]
     end
   end
 

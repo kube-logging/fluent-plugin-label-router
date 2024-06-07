@@ -74,13 +74,14 @@ Configuration reference
 
 
 #### \<match\>
-| Parameter       | Description                                                                   | Type     | Default  |
-|-----------------|-------------------------------------------------------------------------------|----------|----------|
-| labels          | Label definition to match record. Example: `app:nginx`                        | Hash     | nil      |
-| namespaces      | Comma separated list of namespaces. Ignored if left empty.                    | []string | nil      |
-| hosts           | Comma separated list of hosts. Ignored if left empty.                         | []string | nil      |
-| container_names | Comma separated list of container names. Ignored if left empty.               | []string | nil      |
-| negate          | Negate the selector meaning to exclude matches                                | bool     | false    |
+| Parameter        | Description                                                                                           | Type     | Default  |
+|------------------|-------------------------------------------------------------------------------------------------------|----------|----------|
+| labels           | Label definition to match record. Example: `app:nginx`                                                | Hash     | nil      |
+| namespaces       | Comma separated list of namespaces. Ignored if left empty.                                            | []string | nil      |
+| namespace_labels | Label definition of the namespace a record originates. Example: `kubernetes.io/metadata.name=default` | Hash     | nil      |
+| hosts            | Comma separated list of hosts. Ignored if left empty.                                                 | []string | nil      |
+| container_names  | Comma separated list of container names. Ignored if left empty.                                       | []string | nil      |
+| negate           | Negate the selector meaning to exclude matches                                                        | bool     | false    |
 
 ## Rules of thumb
 
