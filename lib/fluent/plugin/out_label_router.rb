@@ -222,7 +222,7 @@ module Fluent
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
-        @access_to_namespace_labels = record_accessor_create("$.kubernetes.namespace_labels")
+        @access_to_namespace_labels = record_accessor_create("$.kubernetes_namespace.labels")
         @access_to_namespace = record_accessor_create("$.kubernetes.namespace_name")
         @access_to_host = record_accessor_create("$.kubernetes.host")
         @access_to_container_name = record_accessor_create("$.kubernetes.container_name")
