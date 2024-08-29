@@ -96,11 +96,8 @@ module Fluent
         # There is no match at all                 -> return false
         def match?(metadata)
           @matches.each do |match|
-            if filter_select(match, metadata) and !match.negate
-              return true
-            end
-            if filter_select(match, metadata) and match.negate
-              return false
+            if filter_select(match, metadata)
+              return !match.negate
             end
           end
           false
