@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     fluent-plugin-label-router (0.3.0)
+      concurrent-ruby
       fluentd (>= 0.14.10, < 2)
       prometheus-client (>= 2.1.0)
 
@@ -43,7 +44,7 @@ GEM
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2024.1)
       tzinfo (>= 1.0.0)
-    webrick (1.8.1)
+    webrick (1.8.2)
     yajl-ruby (1.4.3)
 
 PLATFORMS
