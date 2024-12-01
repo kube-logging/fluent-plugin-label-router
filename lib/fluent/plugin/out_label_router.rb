@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-require "fluent/plugin/output"
+require "fluent/plugin/bare_output"
 require 'prometheus/client'
 require 'concurrent'
 
