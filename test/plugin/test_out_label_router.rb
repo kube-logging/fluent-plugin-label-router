@@ -156,15 +156,15 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       event_time = event_time("2019-07-17 11:11:11 UTC")
       d = create_driver(CONFIG)
       d.run(default_tag: 'test') do
-        d.feed(event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "no"} } } )
+        d.feed(event_time, {"kubernetes_namespace" => {"labels" => {"matching" => "no"} } } )
       end
       d.run(default_tag: 'test2') do
-        d.feed(event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "yes"} } } )
+        d.feed(event_time, {"kubernetes_namespace" => {"labels" => {"matching" => "yes"} } } )
       end
       events = d.events
 
       assert_equal(1, events.size)
-      assert_equal ["matching", event_time, {"kubernetes" => {"namespace_labels" => {"matching" => "yes"} } }], events[0]
+      assert_equal ["matching", event_time, {"kubernetes_namespace" => {"labels" => {"matching" => "yes"} } }], events[0]
     end
   end
 
