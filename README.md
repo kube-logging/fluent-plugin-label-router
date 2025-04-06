@@ -77,7 +77,7 @@ Configuration reference
 | Parameter        | Description                                                                                           | Type     | Default  |
 |------------------|-------------------------------------------------------------------------------------------------------|----------|----------|
 | labels           | Label definition to match record. Example: `app:nginx`                                                | Hash     | nil      |
-| namespaces       | Comma separated list of namespaces. Ignored if left empty.                                            | []string | nil      |
+| namespaces       | Comma separated list of namespaces (list value can be a regex). Ignored if left empty.                                            | []string | nil      |
 | namespace_labels | Label definition of the namespace a record originates. Example: `kubernetes.io/metadata.name=default` | Hash     | nil      |
 | hosts            | Comma separated list of hosts. Ignored if left empty.                                                 | []string | nil      |
 | container_names  | Comma separated list of container names. Ignored if left empty.                                       | []string | nil      |
@@ -145,7 +145,7 @@ Output
 @label = "@NGINX"; tag = "new_tag"; {"log" => "", "kubernetes" => { "namespace_name" => "default", "labels" =>  {"app" => "nginx" } } }
 nil
 ```
-### 2. Both `labels` and `namespace` are optional
+### 3. Both `labels` and `namespace` are optional
 Only `labels`
 ```
 <match example.tag**>
@@ -183,10 +183,10 @@ Rewrite all
 </match>
 ```
 
-### 3. One of `@label` ot `tag` configuration should be specified
+### 4. One of `@label` ot `tag` configuration should be specified
 If you don't rewrite either of them fluent will **likely to crash** because it will reprocess the same messages again.
 
-### 4. Default route/tag
+### 5. Default route/tag
 
 Use `default_label` and/or `default_tag` to route non matching records.
 
@@ -200,6 +200,22 @@ Use `default_label` and/or `default_tag` to route non matching records.
 </match>
 ```
 
+### 5. Use regex in namespaces
+
+Configuration to re-tag and re-label all logs from namespaces which match regex .*-system$
+
+```
+<match example.tag**>
+  @type label_router
+  <route>
+    @label SYSTEM_NAMESPACE
+    tag new_tag
+    <match>
+      namespaces .*-system$
+    </match>
+  </route>
+</match>
+```
 
 ## Copyright
 

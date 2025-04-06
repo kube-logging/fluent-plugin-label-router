@@ -113,8 +113,8 @@ module Fluent
           unless match.container_names.empty? || match.container_names.include?(metadata[:container])
             return false
           end
-          # Break if list of namespaces is not empty and does not include actual namespace
-          unless match.namespaces.empty? || match.namespaces.include?(metadata[:namespace])
+          # Break if list of namespaces is not empty and does not containe any entry that match actual namespace
+          unless match.namespaces.empty? || match.namespaces.any? { |pattern| Regexp.new(pattern).match?(metadata[:namespace]) }
             return false
           end
           # Break if list of namespace_labels is not empty and does not match actual namespace labels
