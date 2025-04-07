@@ -62,7 +62,7 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 <route>
   <match>
     labels app:app3
-    namespaces .*-system$,^kube-.*
+    namespaces_regex .*-system$,^kube-.*
   </match>
 </route>
 <route>
@@ -249,6 +249,7 @@ default_tag "new_tag"
   <match>
     labels
     namespaces
+    namespaces_regex
   </match>
 </route>
 ]
@@ -279,6 +280,7 @@ default_tag "new_tag"
     <match>
       labels
       namespaces
+      namespaces_regex
     </match>
   </route>
   ]
