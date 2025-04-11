@@ -61,6 +61,12 @@ class LabelRouterOutputTest < Test::Unit::TestCase
 </route>
 <route>
   <match>
+    labels app:app3
+    namespaces_regex .*-system$,^kube-.*
+  </match>
+</route>
+<route>
+  <match>
     labels app:nginx
     namespaces dev,sandbox
   </match>
@@ -98,23 +104,42 @@ class LabelRouterOutputTest < Test::Unit::TestCase
       assert_equal(false, r2.match?(labels: { 'app3' => 'app' }, namespace: 'system'))
 
       r3 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[2], nil,nil)
-      assert_equal(true, r3.match?(labels: { 'app' => 'nginx' }, namespace: 'dev'))
-      assert_equal(true, r3.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
-      assert_equal(false, r3.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox'))
+      # Match selector and namespace: GO
+      assert_equal(true, r3.match?(labels: { 'app' => 'app3' }, namespace: 'logging-system'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: 'logging-system1'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: 'system'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: '1system'))
+      # Match selector and namespace: GO
+      assert_equal(true, r3.match?(labels: { 'app' => 'app3' }, namespace: 'kube-ns'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: '1kube-ns'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: 'kube'))
+      # Nothing matched: NO GO
+      assert_equal(false, r3.match?(labels: { 'app' => 'app3' }, namespace: 'kube1'))
+
 
       r4 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[3], nil,nil)
-      # Matching container name
-      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer'))
-      # Missing container name is equal to wrong container
-      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
-      # Wrong container name
-      assert_equal(false, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer2'))
-      # Wrong label but good namespace and container_name
-      assert_equal(false, r4.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox',  container_name: 'mycontainer2'))
+      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'dev'))
+      assert_equal(true, r4.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
+      assert_equal(false, r4.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox'))
 
-      r4 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[4], nil,nil)
+      r5 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[4], nil,nil)
+      # Matching container name
+      assert_equal(true, r5.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer'))
+      # Missing container name is equal to wrong container
+      assert_equal(false, r5.match?(labels: { 'app' => 'nginx' }, namespace: 'sandbox'))
+      # Wrong container name
+      assert_equal(false, r5.match?(labels: { 'app' => 'nginx' }, namespace: 'dev', container: 'mycontainer2'))
+      # Wrong label but good namespace and container_name
+      assert_equal(false, r5.match?(labels: { 'app' => 'nginx2' }, namespace: 'sandbox',  container_name: 'mycontainer2'))
+
+      r6 = Fluent::Plugin::LabelRouterOutput::Route.new(d.instance.routes[5], nil,nil)
       # Matching namespaces_labels
-      assert_equal(true, r4.match?(namespaces_labels: { 'name' => 'default' }))
+      assert_equal(true, r6.match?(namespaces_labels: { 'name' => 'default' }))
     end
   end
 
@@ -224,6 +249,7 @@ default_tag "new_tag"
   <match>
     labels
     namespaces
+    namespaces_regex
   </match>
 </route>
 ]
@@ -254,6 +280,7 @@ default_tag "new_tag"
     <match>
       labels
       namespaces
+      namespaces_regex
     </match>
   </route>
   ]
