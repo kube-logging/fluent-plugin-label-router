@@ -300,4 +300,54 @@ default_tag "new_tag"
       end
     end
 
+  sub_test_case 'test_metrics_worker_id' do
+    CONFIG5 = %[
+  @id xxx
+  metrics true
+  <route>
+    metrics_labels {"id": "test"}
+    tag new_app_tag
+    <match>
+    </match>
+  </route>
+  ]
+
+    def unregister_router_records_total
+      registry = ::Prometheus::Client.registry
+      registry.unregister(:fluentd_router_records_total) if registry.exist?(:fluentd_router_records_total)
+    end
+
+    setup do
+      unregister_router_records_total
+    end
+
+    teardown do
+      unregister_router_records_total
+    end
+
+    def router_records_total
+      ::Prometheus::Client.registry.get(:fluentd_router_records_total).values
+    end
+
+    test 'single worker' do
+      d = create_driver(CONFIG5)
+      d.run(default_tag: 'test') do
+        d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+      end
+
+      assert_equal({ { flow: "", id: "test" } => 1.0 }, router_records_total)
+    end
+
+    test 'multiple workers' do
+      with_worker_config(workers: 2, worker_id: 1) do
+        d = create_driver(CONFIG5)
+        d.run(default_tag: 'test') do
+          d.feed(event_time, {"kubernetes" => {"labels" => {"app" => "app1"} } } )
+        end
+      end
+
+      assert_equal({ { flow: "", id: "test", worker_id: "1" } => 1.0 }, router_records_total)
+    end
+  end
+
 end

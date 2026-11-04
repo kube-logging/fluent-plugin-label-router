@@ -68,24 +68,25 @@ module Fluent
       end
 
       class Route
-        def initialize(rule, router, registry)
+        def initialize(rule, router, registry, base_labels = {})
           @router = router
           @matches = rule['matches']
           @tag = rule['tag'].to_s
           @label = rule['@label']
           @metrics_labels = (rule['metrics_labels'].map { |k, v| [k.to_sym, v] }.to_h if rule['metrics_labels'])
+          @base_labels = base_labels
           @counter = nil
           unless registry.nil?
               if registry.exist?(:fluentd_router_records_total)
                 @counter = registry.get(:fluentd_router_records_total)
               else
-                @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events routed for the flow", labels: [:flow, :id])
+                @counter = registry.counter(:fluentd_router_records_total, docstring: "Total number of events routed for the flow", labels: [:flow, :id] + @base_labels.keys)
               end
           end
         end
 
         def get_labels
-          labels = { 'flow': @label, 'id': "default" }
+          labels = { 'flow': @label, 'id': "default" }.merge(@base_labels)
           !@metrics_labels.nil? ? labels.merge(@metrics_labels) : labels
         end
 
@@ -213,18 +214,21 @@ module Fluent
       def configure(conf)
         super
         @registry = (::Prometheus::Client.registry if @metrics)
+        # With multiple workers every worker exports the same series, so add
+        # worker_id like fluent-plugin-prometheus does to keep them apart.
+        @base_metrics_labels = system_config.workers > 1 ? { worker_id: fluentd_worker_id.to_s } : {}
         @route_map = Hash.new { |h, k| h[k] = Set.new }
         @rwlock = Concurrent::ReadWriteLock.new
         @routers = []
         @default_router = nil
         @routes.each do |rule|
           route_router = event_emitter_router(rule['@label'])
-          @routers << Route.new(rule, route_router, @registry)
+          @routers << Route.new(rule, route_router, @registry, @base_metrics_labels)
         end
 
         if @default_route != '' or @default_tag != ''
           default_rule = { 'matches' => nil, 'tag' => @default_tag, '@label' => @default_route, 'metrics_labels' => @default_metrics_labels }
-          @default_router = Route.new(default_rule, event_emitter_router(@default_route), @registry)
+          @default_router = Route.new(default_rule, event_emitter_router(@default_route), @registry, @base_metrics_labels)
         end
 
         @access_to_labels = record_accessor_create("$.kubernetes.labels")
